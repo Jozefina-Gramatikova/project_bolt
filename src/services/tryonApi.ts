@@ -8,12 +8,14 @@ export interface TryOnImageResponse {
   success: boolean;
   image_path: string;
   message: string;
+  description?: string;
 }
 
 export interface TryOnVideoResponse {
   success: boolean;
   video_path: string;
   message: string;
+  description?: string;
 }
 
 export interface ErrorResponse {

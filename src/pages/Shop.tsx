@@ -84,14 +84,23 @@ const Shop = () => {
         selectedProduct.image
       );
 
-      // Show the generated image
+      // Preload the image before showing the message
       const imageUrl = getDownloadUrl(imageResponse.image_path, 'image');
 
+      // Wait for image to load
+      await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(true);
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = imageUrl;
+      });
+
+      // Show the generated image with AI message after it's loaded
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: "Great! Here's your try-on image. Now generating an animated video... This will take about 1-2 minutes! 🎬",
+          content: imageResponse.description || "Great! Here's your try-on image. Now generating an animated video... This will take about 1-2 minutes! 🎬",
           image: imageUrl,
         },
       ]);
@@ -99,14 +108,18 @@ const Shop = () => {
       // Step 2: Generate the video from the try-on image
       const videoResponse = await generateTryOnVideo(imageResponse.image_path);
 
-      // Show the final video
+      // Get video URL
       const videoUrl = getDownloadUrl(videoResponse.video_path, 'video');
 
+      // Wait a moment for video to be accessible
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Show the final video with AI message
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: "Here's your virtual try-on video! 🎥✨",
+          content: videoResponse.description || "Here's your virtual try-on video! 🎥✨",
           video: videoUrl,
         },
       ]);
