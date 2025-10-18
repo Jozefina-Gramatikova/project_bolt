@@ -5,7 +5,7 @@ import { ShoppingCart, User, Sparkles, Loader2 } from "lucide-react";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ImageUpload } from "@/components/ImageUpload";
 import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { generateTryOnImage, generateTryOnVideo, getDownloadUrl } from "@/services/tryonApi";
 
 interface Product {
   id: number;
@@ -73,39 +73,54 @@ const Shop = () => {
       ...prev,
       {
         role: "assistant",
-        content: "Creating your virtual try-on... This may take a moment! ✨",
+        content: "Creating your virtual try-on image... This may take a moment! ✨",
       },
     ]);
 
     try {
-      const { data, error } = await supabase.functions.invoke("fashion-chat", {
-        body: {
-          userPhoto,
-          clothingPhoto: selectedProduct.image,
-        },
-      });
+      // Step 1: Generate the try-on image
+      const imageResponse = await generateTryOnImage(
+        userPhoto,
+        selectedProduct.image
+      );
 
-      if (error) throw error;
+      // Show the generated image
+      const imageUrl = getDownloadUrl(imageResponse.image_path, 'image');
 
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: "Here's your virtual try-on! 🎥✨",
-          video: data.videoUrl,
+          content: "Great! Here's your try-on image. Now generating an animated video... This will take about 1-2 minutes! 🎬",
+          image: imageUrl,
+        },
+      ]);
+
+      // Step 2: Generate the video from the try-on image
+      const videoResponse = await generateTryOnVideo(imageResponse.image_path);
+
+      // Show the final video
+      const videoUrl = getDownloadUrl(videoResponse.video_path, 'video');
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Here's your virtual try-on video! 🎥✨",
+          video: videoUrl,
         },
       ]);
       setStep("complete");
 
       toast({
         title: "Success!",
-        description: "Your virtual try-on is ready!",
+        description: "Your virtual try-on video is ready!",
       });
     } catch (error) {
-      console.error("Error generating video:", error);
+      console.error("Error generating try-on:", error);
       toast({
         title: "Error",
-        description: "Failed to generate video. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to generate try-on. Please try again.",
         variant: "destructive",
       });
     } finally {
